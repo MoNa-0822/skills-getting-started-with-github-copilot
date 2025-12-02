@@ -4,6 +4,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
 
+  // Helper: make a readable name and initials from an email/identifier
+  function formatParticipant(text) {
+    const raw = String(text || "");
+    const local = raw.split("@")[0];
+    const words = local.replace(/[\._\-]+/g, " ").split(" ").filter(Boolean);
+    const name = words.map(w => w[0].toUpperCase() + w.slice(1)).join(" ") || raw;
+    const initials = words.slice(0,2).map(w => w[0].toUpperCase()).join("") || raw.slice(0,2).toUpperCase();
+    return { name, initials };
+  }
+
   // Function to fetch activities from API
   async function fetchActivities() {
     try {
@@ -12,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = `<option value="">-- Select an activity --</option>`;
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -20,11 +31,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Build participants HTML
+        let participantsHTML = "";
+        if (details.participants && details.participants.length > 0) {
+          const items = details.participants.map(p => {
+            const { name: displayName, initials } = formatParticipant(p);
+            return `
+              <li class="participant-item">
+                <span class="participant-badge">${initials}</span>
+                <span class="participant-name">${displayName}</span>
+              </li>
+            `;
+          }).join("");
+          participantsHTML = `<ul class="participant-list">${items}</ul>`;
+        } else {
+          participantsHTML = `<p class="participants-empty">No participants yet — be the first!</p>`;
+        }
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+
+          <div class="participants">
+            <h5>Participants</h5>
+            ${participantsHTML}
+          </div>
         `;
 
         activitiesList.appendChild(activityCard);
